@@ -1,0 +1,186 @@
+/* Google-style neutral font fallback */
+:root {
+  --bg1: #002f7b;
+  --bg2: #19003e;
+  --accent: #6ee7b7;
+  --accent2: #60a5fa;
+  --muted: rgba(255, 255, 255, 0.65);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, Segoe UI, Roboto, system-ui, Arial;
+}
+body {
+  background: linear-gradient(345deg, var(--bg1), var(--bg2));
+  color: #fff;
+  overflow: hidden;
+}
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px
+  );
+  background-size: 40px 40px;
+  opacity: 0.9;
+  animation: drift 20s linear infinite;
+}
+@keyframes drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-40px);
+  }
+}
+.container {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+canvas#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+}
+.hud {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 18px;
+  z-index: 5;
+  font-weight: 600;
+}
+.hud .score,
+.hud .timer {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+}
+.overlay.hidden {
+  display: none;
+}
+.card {
+  width: min(520px, 92%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+  border-radius: 12px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 6px 30px rgba(2, 6, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.card h1 {
+  margin: 0;
+  font-size: 28px;
+}
+.card h2 {
+  margin: 0 0 8px 0;
+}
+.card p {
+  color: var(--muted);
+  margin: 10px 0;
+}
+.card ul {
+  text-align: left;
+  color: var(--muted);
+  margin: 12px 0 18px 0;
+  padding-left: 18px;
+}
+.buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn.primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #06202a;
+  border: none;
+  box-shadow: 0 6px 18px rgba(20, 60, 80, 0.35);
+}
+.controls {
+  position: absolute;
+  left: 16px;
+  bottom: 18px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+}
+.control {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 20px;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+.control:active {
+  transform: scale(0.98);
+}
+
+/* small responsive tweaks */
+@media (max-width: 520px) {
+  .hud {
+    padding: 0 10px;
+  }
+  .control {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* subtle entrance animations */
+.overlay .card {
+  transform: translateY(8px);
+  opacity: 0;
+  animation: pop 0.36s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+@keyframes pop {
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
