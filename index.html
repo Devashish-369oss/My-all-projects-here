@@ -1,65 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Endless Dodge ➖ Game</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake Game</title>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="bg"></div>
-    <div class="container">
-      <header class="hud">
-        <div class="score">Score -> <span id="score">0</span></div>
-        <div class="timer">Time -> <span id="time">0.00</span>s</div>
-      </header>
-
-      <canvas id="gameCanvas"></canvas>
-
+    <div class="game-container">
+      <h1>Snake Game</h1>
+      <div class="score">Score: <span id="score">0</span></div>
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
       <div class="controls">
-        <button id="leftBtn" class="control">◀</button>
-        <button id="rightBtn" class="control">▶</button>
-      </div>
-
-      <div id="startScreen" class="overlay">
-        <div class="card">
-          <h1>Endless Dodge</h1>
-          <p>Move to avoid falling hazards. Last as long as you can.</p>
-          <div class="buttons">
-            <button id="howBtn" class="btn">How to play</button>
-            <button id="startBtn" class="btn primary">Start</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="howScreen" class="overlay hidden">
-        <div class="card">
-          <h2>How to Play</h2>
-          <ul>
-            <li>Use arrow keys or A / D to move left and right.</li>
-            <li>On mobile, use the on-screen buttons.</li>
-            <li>Dodge falling hazards; survive longer to score more.</li>
-          </ul>
-          <div class="buttons">
-            <button id="backBtn" class="btn">Back</button>
-            <button id="playBtn" class="btn primary">Play</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="gameOver" class="overlay hidden">
-        <div class="card">
-          <h2>Game Over</h2>
-          <p>Score: <strong id="finalScore">0</strong></p>
-          <p>Time: <strong id="finalTime">0.00</strong>s</p>
-          <div class="buttons">
-            <button id="retryBtn" class="btn">Retry</button>
-            <button id="menuBtn" class="btn primary">Main Menu</button>
-          </div>
-        </div>
+        <p>Use arrow keys or WASD to move</p>
+        <button id="startBtn">Start Game</button>
+        <button id="resetBtn">Reset</button>
       </div>
     </div>
-
     <script src="script.js"></script>
   </body>
 </html>

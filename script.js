@@ -1,297 +1,198 @@
-console.log("game script loaded");
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const scoreElement = document.getElementById("score");
+const startBtn = document.getElementById("startBtn");
+const resetBtn = document.getElementById("resetBtn");
 
-let W = 0,
-  H = 0;
-function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resize);
-resize();
+const gridSize = 20;
+let tileCount;
 
-const ui = {
-  startScreen: document.getElementById("startScreen"),
-  howScreen: document.getElementById("howScreen"),
-  gameOver: document.getElementById("gameOver"),
-  scoreEl: document.getElementById("score"),
-  timeEl: document.getElementById("time"),
-  finalScore: document.getElementById("finalScore"),
-  finalTime: document.getElementById("finalTime"),
-  startBtn: document.getElementById("startBtn"),
-  howBtn: document.getElementById("howBtn"),
-  backBtn: document.getElementById("backBtn"),
-  playBtn: document.getElementById("playBtn"),
-  retryBtn: document.getElementById("retryBtn"),
-  menuBtn: document.getElementById("menuBtn"),
-  leftBtn: document.getElementById("leftBtn"),
-  rightBtn: document.getElementById("rightBtn"),
-};
-
-let running = false;
-let lastTime = 0;
-let spawnTimer = 0;
-let spawnInterval = 900; // ms
-let difficultyTimer = 0;
-let obstacles = [];
-let particles = [];
-let score = 0;
-let startTime = 0;
-
-const player = {
-  w: 64,
-  h: 18,
-  x: 0,
-  y: 0,
-  speed: 420,
-  vx: 0,
-};
-
-function resetState() {
-  obstacles = [];
-  particles = [];
-  score = 0;
-  spawnInterval = 900;
-  difficultyTimer = 0;
-  player.w = Math.max(40, Math.min(80, Math.floor(W * 0.08)));
-  player.h = Math.max(14, Math.floor(player.w * 0.28));
-  player.x = W / 2 - player.w / 2;
-  player.y = H - player.h - 70;
-}
-
-function spawnObstacle() {
-  const w = 20 + Math.random() * 60;
-  const x = Math.random() * (W - w);
-  const speed =
-    120 + Math.random() * 220 + Math.min(1.2, difficultyTimer / 15000) * 200;
-  obstacles.push({
-    x,
-    y: -w,
-    w,
-    h: w * 0.6,
-    speed,
-    color: `hsl(${Math.floor(Math.random() * 50) + 10},70%,60%)`,
-  });
-}
-
-function addParticles(x, y, color, count = 20) {
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x,
-      y,
-      vx: (Math.random() - 0.5) * 6,
-      vy: (Math.random() - 1.5) * 6,
-      life: 60 + Math.random() * 40,
-      color,
-    });
-  }
-}
-
-function checkCollision(a, b) {
-  return (
-    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+function resizeCanvas() {
+  const maxSize = 400;
+  const minSize = 200;
+  const size = Math.min(
+    maxSize,
+    Math.max(
+      minSize,
+      Math.min(window.innerWidth * 0.8, window.innerHeight * 0.6)
+    )
   );
+  canvas.width = size;
+  canvas.height = size;
+  tileCount = Math.floor(canvas.width / gridSize);
 }
 
-function gameOver() {
-  running = false;
-  ui.finalScore.textContent = Math.floor(score);
-  const elapsed = (performance.now() - startTime) / 1000;
-  ui.finalTime.textContent = elapsed.toFixed(2);
-  ui.gameOver.classList.remove("hidden");
-  addParticles(player.x + player.w / 2, player.y + player.h / 2, "white", 40);
+let snake = [{ x: 10, y: 10 }];
+let food = {};
+let dx = 0;
+let dy = 0;
+let score = 0;
+let gameRunning = false;
+let gameLoop;
+
+function randomTile() {
+  return Math.floor(Math.random() * tileCount);
 }
 
-function update(dt) {
-  if (!running) return;
-  // move player
-  player.x += player.vx * dt;
-  if (player.x < 8) player.x = 8;
-  if (player.x + player.w > W - 8) player.x = W - player.w - 8;
-
-  // spawn logic
-  spawnTimer += dt * 1000;
-  difficultyTimer += dt * 1000;
-  if (spawnTimer > spawnInterval) {
-    spawnTimer = 0;
-    spawnObstacle();
-  }
-  // increase difficulty gradually
-  if (difficultyTimer > 4000 && spawnInterval > 260) {
-    spawnInterval *= 0.985;
-  }
-
-  // update obstacles
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const o = obstacles[i];
-    o.y += o.speed * dt;
-    if (o.y > H + 200) {
-      obstacles.splice(i, 1);
-      score += 12; // dodged
-      continue;
+function generateFood() {
+  food = {
+    x: randomTile(),
+    y: randomTile(),
+  };
+  // Ensure food doesn't spawn on snake
+  for (let segment of snake) {
+    if (segment.x === food.x && segment.y === food.y) {
+      generateFood();
+      return;
     }
-    // collision with player
-    const pbox = { x: player.x, y: player.y, w: player.w, h: player.h };
-    if (checkCollision(pbox, o)) {
-      addParticles(
-        player.x + player.w / 2,
-        player.y + player.h / 2,
-        o.color,
-        40
-      );
+  }
+}
+
+function drawGame() {
+  // Clear canvas
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw snake with gradient
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#4ea74e");
+  gradient.addColorStop(1, "#088d08");
+  ctx.fillStyle = gradient;
+  for (let i = 0; i < snake.length; i++) {
+    const segment = snake[i];
+    const size = gridSize - 2;
+    const x = segment.x * gridSize + 1;
+    const y = segment.y * gridSize + 1;
+    ctx.fillRect(x, y, size, size);
+    // Add shadow for head
+    if (i === 0) {
+      ctx.shadowColor = "#0db90d";
+      ctx.shadowBlur = 10;
+      ctx.fillRect(x, y, size, size);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Draw food with animation effect
+  const time = Date.now() * 0.005;
+  const scale = 1 + Math.sin(time) * 0.1;
+  const foodSize = (gridSize - 2) * scale;
+  const foodX = food.x * gridSize + (gridSize - foodSize) / 2;
+  const foodY = food.y * gridSize + (gridSize - foodSize) / 2;
+  ctx.fillStyle = "#ff0000";
+  ctx.shadowColor = "#ff0000";
+  ctx.shadowBlur = 15;
+  ctx.fillRect(foodX, foodY, foodSize, foodSize);
+  ctx.shadowBlur = 0;
+}
+
+function moveSnake() {
+  if (dx === 0 && dy === 0) return; // Don't move if no direction is set
+
+  const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+  // Check wall collision
+  if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+    gameOver();
+    return;
+  }
+
+  // Check self collision
+  for (let segment of snake) {
+    if (head.x === segment.x && head.y === segment.y) {
       gameOver();
       return;
     }
   }
 
-  // update particles
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const P = particles[i];
-    P.x += P.vx;
-    P.y += P.vy;
-    P.vy += 0.18;
-    P.life -= 1;
-    if (P.life <= 0) particles.splice(i, 1);
-  }
+  snake.unshift(head);
 
-  // score increases with time
-  score += dt * 8;
-  ui.scoreEl.textContent = Math.floor(score);
-  ui.timeEl.textContent = ((performance.now() - startTime) / 1000).toFixed(2);
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  // subtle horizon
-  const grd = ctx.createLinearGradient(0, 0, 0, H);
-  grd.addColorStop(0, "rgba(255,255,255,0.02)");
-  grd.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
-
-  // draw player
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  const px = player.x,
-    py = player.y,
-    pw = player.w,
-    ph = player.h;
-  ctx.fillRect(px, py, pw, ph);
-
-  // draw obstacles
-  for (const o of obstacles) {
-    ctx.fillStyle = o.color;
-    ctx.beginPath();
-    ctx.ellipse(
-      o.x + o.w / 2,
-      o.y + o.h / 2,
-      o.w / 2,
-      o.h / 2,
-      0,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  }
-
-  // draw particles
-  for (const P of particles) {
-    ctx.fillStyle = P.color;
-    ctx.globalAlpha = Math.max(0, P.life / 80);
-    ctx.fillRect(P.x, P.y, 3, 3);
-    ctx.globalAlpha = 1;
+  // Check food collision
+  if (head.x === food.x && head.y === food.y) {
+    score += 10;
+    scoreElement.textContent = score;
+    generateFood();
+  } else {
+    snake.pop();
   }
 }
 
-function loop(ts) {
-  if (!lastTime) lastTime = ts;
-  const dt = Math.min(0.05, (ts - lastTime) / 1000);
-  lastTime = ts;
-  update(dt);
-  draw();
-  if (running) requestAnimationFrame(loop);
+function gameOver() {
+  gameRunning = false;
+  clearInterval(gameLoop);
+  alert(`Game Over! Score: ${score}`);
 }
 
-// controls
-const keys = { left: false, right: false };
-function updatePlayerVelocity() {
-  if (keys.left && !keys.right) player.vx = -player.speed;
-  else if (keys.right && !keys.left) player.vx = player.speed;
-  else player.vx = 0;
+function gameStep() {
+  moveSnake();
+  drawGame();
 }
-window.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") keys.left = true;
-  if (e.key === "ArrowRight" || e.key === "d" || e.key === "D")
-    keys.right = true;
-  updatePlayerVelocity();
-});
-window.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A")
-    keys.left = false;
-  if (e.key === "ArrowRight" || e.key === "d" || e.key === "D")
-    keys.right = false;
-  updatePlayerVelocity();
-});
-
-// mobile button controls
-let leftDown = false,
-  rightDown = false;
-ui.leftBtn.addEventListener("pointerdown", () => {
-  keys.left = true;
-  updatePlayerVelocity();
-});
-ui.leftBtn.addEventListener("pointerup", () => {
-  keys.left = false;
-  updatePlayerVelocity();
-});
-ui.rightBtn.addEventListener("pointerdown", () => {
-  keys.right = true;
-  updatePlayerVelocity();
-});
-ui.rightBtn.addEventListener("pointerup", () => {
-  keys.right = false;
-  updatePlayerVelocity();
-});
-
-// UI hookups
-ui.startBtn.addEventListener("click", () => {
-  ui.startScreen.classList.add("hidden");
-  startGame();
-});
-ui.howBtn.addEventListener("click", () => {
-  ui.startScreen.classList.add("hidden");
-  ui.howScreen.classList.remove("hidden");
-});
-ui.backBtn.addEventListener("click", () => {
-  ui.howScreen.classList.add("hidden");
-  ui.startScreen.classList.remove("hidden");
-});
-ui.playBtn.addEventListener("click", () => {
-  ui.howScreen.classList.add("hidden");
-  startGame();
-});
-ui.retryBtn.addEventListener("click", () => {
-  ui.gameOver.classList.add("hidden");
-  startGame();
-});
-ui.menuBtn.addEventListener("click", () => {
-  ui.gameOver.classList.add("hidden");
-  ui.startScreen.classList.remove("hidden");
-});
 
 function startGame() {
-  resetState();
-  running = true;
-  lastTime = 0;
-  spawnTimer = 0;
-  startTime = performance.now();
-  ui.scoreEl.textContent = "0";
-  ui.timeEl.textContent = "0.00";
-  requestAnimationFrame(loop);
+  if (!gameRunning) {
+    gameRunning = true;
+    snake = [{ x: Math.floor(tileCount / 2), y: Math.floor(tileCount / 2) }];
+    dx = 0;
+    dy = 0;
+    score = 0;
+    scoreElement.textContent = score;
+    generateFood();
+    gameLoop = setInterval(gameStep, 150); // Move every 150ms for playable speed
+  }
 }
 
-// init
-resetState();
-// nice warm intro animation - small drop of obstacles
-for (let i = 0; i < 6; i++) spawnObstacle();
+function resetGame() {
+  gameRunning = false;
+  clearInterval(gameLoop);
+  snake = [{ x: Math.floor(tileCount / 2), y: Math.floor(tileCount / 2) }];
+  dx = 0;
+  dy = 0;
+  score = 0;
+  scoreElement.textContent = score;
+  generateFood();
+  drawGame();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!gameRunning) return;
+
+  const key = e.key;
+  if (key === "ArrowLeft" || key === "a" || key === "A") {
+    if (dx === 0) {
+      dx = -1;
+      dy = 0;
+    }
+  } else if (key === "ArrowUp" || key === "w" || key === "W") {
+    if (dy === 0) {
+      dx = 0;
+      dy = -1;
+    }
+  } else if (key === "ArrowRight" || key === "d" || key === "D") {
+    if (dx === 0) {
+      dx = 1;
+      dy = 0;
+    }
+  } else if (key === "ArrowDown" || key === "s" || key === "S") {
+    if (dy === 0) {
+      dx = 0;
+      dy = 1;
+    }
+  }
+});
+
+startBtn.addEventListener("click", startGame);
+resetBtn.addEventListener("click", resetGame);
+
+// Handle window resize
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  if (!gameRunning) {
+    generateFood();
+    drawGame();
+  }
+});
+
+// Initial setup
+resizeCanvas();
+generateFood();
+drawGame();
